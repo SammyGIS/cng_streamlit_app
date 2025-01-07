@@ -5,7 +5,7 @@ import leafmap.foliumap as leafmap
 
 # set constants variables
 APP_TITLE = 'NIGERIA CNG Stations Locator App ⛽🌍📍'
-FILE_PATH = "https://raw.githubusercontent.com/SammyGIS/cng_streamlit_app/refs/heads/master/cng_locations_ng.geojson"
+FILE_PATH = "https://raw.githubusercontent.com/SammyGIS/cng_streamlit_app/refs/heads/master/data/cng_locations_ng.geojson"
 DEFAULT_CENTER = [9.0820, 8.6753]  # Nigeria's approximate center
 DEFAULT_ZOOM = 5
 
