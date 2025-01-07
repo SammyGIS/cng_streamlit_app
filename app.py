@@ -122,6 +122,7 @@ def create_map(data, filtered_data=None):
     
     # Add all stations in a muted color
     if data is not None:
+        
         m.add_gdf(
             data,
             layer_name="All CNG Stations",
