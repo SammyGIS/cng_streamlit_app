@@ -50,42 +50,51 @@ def get_long_lat(gdf):
     return lon, lat
 
 def get_bounds(gdf):
-    """Get the bounding box coordinates of the filtered data"""
+    """
+    Get the bounding box coordinates and appropriate zoom level from a GeoDataFrame.
+    
+    Args:
+        gdf (GeoDataFrame): Input GeoDataFrame containing geometries
+        
+    Returns:
+        tuple: (center_lat, center_lon, zoom) containing the center coordinates
+              and appropriate zoom level for map display
+        
+    Raises:
+        ValueError: If the GeoDataFrame is empty or contains invalid geometries
+    """
     try:
-        # Convert to numeric to ensure proper bounds calculation
-        bounds = gdf.bounds
+        if gdf.empty:
+            raise ValueError("GeoDataFrame is empty")
+            
         # Get the total bounds of all geometries
-        minx = bounds['minx'].min()
-        miny = bounds['miny'].min()
-        maxx = bounds['maxx'].max()
-        maxy = bounds['maxy'].max()
+        minx, miny, maxx, maxy = gdf.total_bounds
         
         # Calculate center point
         center_lat = (miny + maxy) / 2
         center_lon = (minx + maxx) / 2
         
-        # Calculate appropriate zoom level based on the area size
-        # Larger areas will have smaller zoom values
+        # Calculate extent in degrees
         lat_diff = maxy - miny
         lon_diff = maxx - minx
         max_diff = max(lat_diff, lon_diff)
         
-        # Adjust zoom level based on the size of the area with more conservative zoom levels
-        if max_diff > 5:  # Very large area (country level)
-            zoom = 6
-        elif max_diff > 2:  # Large area (state level)
-            zoom = 7
-        elif max_diff > 1:  # Medium area (LGA level)
-            zoom = 7
-        elif max_diff > 0.1:  # Small area (city level)
-            zoom = 8
-        else:  # Very small area (neighborhood level)
+        # More conservative zoom level calculation
+        if max_diff <= 0.01:  # Very small area - keep zoom at 12 as requested
             zoom = 12
+        elif max_diff <= 0.5:  # Medium area (city level)
+            zoom = 10
+        elif max_diff <= 2:    # Large area (metropolitan level)
+            zoom = 8
+        elif max_diff <= 5:    # Very large area (state/province level)
+            zoom = 6
+        else:                  # Massive area (country/continent level)
+            zoom = 4
             
         return center_lat, center_lon, zoom
+        
     except Exception as e:
-        st.warning(f"Could not calculate bounds: {str(e)}")
-        return DEFAULT_CENTER[0], DEFAULT_CENTER[1], DEFAULT_ZOOM
+        raise ValueError(f"Error calculating bounds: {str(e)}")
 
 def create_map(data, filtered_data=None):
     """Create and configure the map with dynamic zooming"""
