@@ -49,13 +49,61 @@ def get_long_lat(gdf):
     lon, lat = gdf.iloc[0]  # Extracting the first row's longitude and latitude values
     return lon, lat
 
-def create_map(center=None, zoom=DEFAULT_ZOOM, data=None):
-    """Create and configure the map"""
-    m = leafmap.Map(
-        center=center or DEFAULT_CENTER,
-        zoom=zoom
-    )
+def get_bounds(gdf):
+    """Get the bounding box coordinates of the filtered data"""
+    try:
+        # Convert to numeric to ensure proper bounds calculation
+        bounds = gdf.bounds
+        # Get the total bounds of all geometries
+        minx = bounds['minx'].min()
+        miny = bounds['miny'].min()
+        maxx = bounds['maxx'].max()
+        maxy = bounds['maxy'].max()
+        
+        # Calculate center point
+        center_lat = (miny + maxy) / 2
+        center_lon = (minx + maxx) / 2
+        
+        # Calculate appropriate zoom level based on the area size
+        # Larger areas will have smaller zoom values
+        lat_diff = maxy - miny
+        lon_diff = maxx - minx
+        max_diff = max(lat_diff, lon_diff)
+        
+        # Adjust zoom level based on the size of the area
+        if max_diff > 5:  # Very large area (country level)
+            zoom = 6
+        elif max_diff > 2:  # Large area (state level)
+            zoom = 8
+        elif max_diff > 1:  # Medium area (LGA level)
+            zoom = 8
+        elif max_diff > 0.1:  # Small area (city level)
+            zoom = 10
+        else:  # Very small area (neighborhood level)
+            zoom = 10
+            
+        return center_lat, center_lon, zoom
+    except Exception as e:
+        st.warning(f"Could not calculate bounds: {str(e)}")
+        return DEFAULT_CENTER[0], DEFAULT_CENTER[1], DEFAULT_ZOOM
+
+def create_map(data, filtered_data=None):
+    """Create and configure the map with dynamic zooming"""
+    if filtered_data is not None and not filtered_data.empty:
+        # Get center and zoom level based on filtered data
+        center_lat, center_lon, zoom = get_bounds(filtered_data)
+        m = leafmap.Map(
+            center=[center_lat, center_lon],
+            zoom=zoom
+        )
+    else:
+        # Use default values if no filtered data
+        m = leafmap.Map(
+            center=DEFAULT_CENTER,
+            zoom=DEFAULT_ZOOM
+        )
     
+    # Add map layers
     m.add_tile_layer(
         url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
         name="Google Satellite",
@@ -63,16 +111,25 @@ def create_map(center=None, zoom=DEFAULT_ZOOM, data=None):
     )
     m.add_basemap("ROADMAP")
     
+    # Add all stations in a muted color
     if data is not None:
         m.add_gdf(
             data,
-            layer_name="CNG Stations",
+            layer_name="All CNG Stations",
+            fill_colors='gray',
+            opacity=0.3
+        )
+    
+    # Add filtered stations with highlighted color
+    if filtered_data is not None and not filtered_data.empty:
+        m.add_gdf(
+            filtered_data,
+            layer_name="Filtered Stations",
             fill_colors='green',
-            zoom_to_layer=True
+            opacity=1
         )
     
     return m
-        
 
 def display_statistics(data):
     """Display comprehensive statistics about CNG stations"""
@@ -252,12 +309,8 @@ def main():
         st.markdown("---")
         st.subheader("Interactive Station Map 🗺️")
         
-        lon, lat = get_long_lat(filtered_data)
-        if lon and lat:
-            st.write(f"📍 Selected Station Location: {lon:.4f}°E, {lat:.4f}°N")
-            m = create_map([lat, lon], DEFAULT_ZOOM, data)
-        else:
-            m = create_map(data=data)
+        # Create map with both complete and filtered data
+        m = create_map(data, filtered_data)
         
         m.to_streamlit(height=700)
         st.caption("Data source: Presidential CNG Initiative (PCI) - https://pci.gov.ng/conversion-centers")
