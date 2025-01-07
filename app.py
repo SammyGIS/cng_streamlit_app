@@ -70,17 +70,17 @@ def get_bounds(gdf):
         lon_diff = maxx - minx
         max_diff = max(lat_diff, lon_diff)
         
-        # Adjust zoom level based on the size of the area
+        # Adjust zoom level based on the size of the area with more conservative zoom levels
         if max_diff > 5:  # Very large area (country level)
             zoom = 6
         elif max_diff > 2:  # Large area (state level)
-            zoom = 8
+            zoom = 7
         elif max_diff > 1:  # Medium area (LGA level)
-            zoom = 8
+            zoom = 7
         elif max_diff > 0.1:  # Small area (city level)
-            zoom = 10
+            zoom = 8
         else:  # Very small area (neighborhood level)
-            zoom = 10
+            zoom = 12
             
         return center_lat, center_lon, zoom
     except Exception as e:
