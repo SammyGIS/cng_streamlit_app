@@ -1,6 +1,6 @@
-streamlit==1.21.0
-pandas>=0.25
-geopandas==1.0.1
-leafmap==0.36.2
-mapclassify==2.8.1
-requests==2.32.3
+streamlit
+geopandas
+leafmap
+pandas
+mapclassify
+requests
